@@ -15,7 +15,7 @@ class CloudAsFunction(object):
     
     step = 5
     minimum_useful = 0
-    maximum_useful = 200
+    maximum_useful = 150
     default_add_if_no_info = 1e-1
     
     def __init__(self, cloud, scale=True):
