@@ -4,9 +4,9 @@ from scipy.spatial.distance import cdist
 
 class CloudAsFunction(object):
     step = 5
+    theoric_max = 25000
     minimum_useful = 0
     maximum_useful = 250
-    default_add_if_no_info = 1e-1
 
     def __init__(self, cloud, weights=np.ones((7,))):
         self._cloud = cloud.copy()
@@ -33,13 +33,15 @@ class CloudAsFunction(object):
     def custom_distance_with(self, f2):
         maximum_x = min(f2.get_max(), self.get_max(), self.maximum_useful)
         distance = 0
+        if self._cloud[1][0] != f2._cloud[1][0]:
+            return 5555555
         for i in range(self.minimum_useful, maximum_x, self.step):
             to_add = cdist(np.expand_dims(np.asarray(self.get_value_at(i)[1]), axis=0),
-                           np.expand_dims(np.asarray(f2.get_value_at(i)[1]), axis=0), metric='cosine')[0, 0]
-            if np.isnan(to_add):
-                to_add = self.default_add_if_no_info
+                           np.expand_dims(np.asarray(f2.get_value_at(i)[1]), axis=0), metric='euclidean')[0, 0]
             distance += to_add
-        return distance * self.step / (maximum_x - self.minimum_useful) if maximum_x > self.minimum_useful else 1000000
+            if distance / maximum_x > self.theoric_max:
+                return distance / maximum_x
+        return distance / maximum_x if maximum_x > self.minimum_useful else 4444444
 
     @classmethod
     def aggregate(cls, list_of_functions):
