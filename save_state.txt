@@ -8,6 +8,44 @@ hk	success
 41	0.5450
 61	0.5687
 81	0.5829
-101	0.5971
+101	0.5971563981042654
 121	0.5829
 141	0.5782
+161	0.5734597156398105
+181	0.5592417061611374
+
+single mineral	success
+1		0.6208530805687204
+21		0.6208530805687204
+41		0.6208530805687204
+61		0.6208530805687204
+81		0.6208530805687204
+101		0.6208530805687204
+121		0.6208530805687204
+141		0.6208530805687204
+161		0.6208530805687204
+181		0.6161137440758294
+
+for step = 5, success is : 0.6208530805687204
+<simulate>: begin splitting
+<simulate>: begin testing
+<simulate>: compute score fold 0
+for step = 10, success is : 0.4597156398104265
+<simulate>: begin splitting
+<simulate>: begin testing
+<simulate>: compute score fold 0
+for step = 15, success is : 0.36492890995260663
+
+for window = 5, success is : 0.6208530805687204
+<simulate>: begin splitting
+<simulate>: begin testing
+<simulate>: compute score fold 0
+for window = 10, success is : 0.3175355450236967
+<simulate>: begin splitting
+<simulate>: begin testing
+<simulate>: compute score fold 0
+for window = 15, success is : 0.3175355450236967
+<simulate>: begin splitting
+<simulate>: begin testing
+<simulate>: compute score fold 0
+for window = 20, success is : 0.3127962085308057

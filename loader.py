@@ -4,8 +4,9 @@ import numpy as np
 
 races = ['Protoss', 'Terran', 'Zerg']
 
-csv_name = 'TEST.csv'
-save_folder = 'test functions'
+csv_name = 'TRAIN.csv'
+save_folder = 'small_functions_bt_elongated'
+
 
 def vectorize_game(game):
     offset = 0
@@ -16,7 +17,6 @@ def vectorize_game(game):
     race = races.index(game[1 + offset]) * 100
     number_of_element_in_frame = 0
     buffer_output = np.zeros(output.shape)
-
     for val in game[2 + offset:]:
 
         # early stopping if game long enough
@@ -36,21 +36,25 @@ def vectorize_game(game):
 
         # if it is a timestamp, add the buffer as a new element
         if sel < 0 and base < 0 and hk10 < 0 and hk01 < 0:
-            # normalize
-            buffer_output /= max(number_of_element_in_frame, 1)
             # reset counter
             number_of_element_in_frame = 0
             # add timestamp
             buffer_output[:, -1] = time
+            # delete first line
+            buffer_output = buffer_output[1:]
+            buf_len = len(buffer_output)
+            # elongate time
+            for i, line in enumerate(buffer_output):
+                line[-1] += 5*i/buf_len
             # append
             output = np.append(output, buffer_output, axis=0)
             # reset buffer
-            buffer_output = np.zeros(buffer_output.shape)
+            buffer_output = np.zeros((1, 7))
             time += 5
         # if it is an action, add the vector to the buffer
         else:
             number_of_element_in_frame += 1
-            buffer_output += np.asarray([[race, sel, base, mineral, hk10, hk01, 0]])
+            buffer_output = np.append(buffer_output, np.asarray([[race, sel, base, mineral, hk10, hk01, 0]]), axis=0)
 
     return output
 
@@ -77,7 +81,7 @@ for i, df in enumerate(pd.read_csv(csv_name, chunksize=1, header=None, engine='p
 
 if csv_name == 'TRAIN.csv':
     for key, value in games.items():
-        with open('{}\{}.dat'.format(save_folder, key.rsplit('/')[-2]), 'wb+') as f:
+        with open('{}\{}-{}-{}.dat'.format(save_folder, key.rsplit('/')[-4], key.rsplit('/')[-3], key.rsplit('/')[-2]), 'wb+') as f:
             pickle.dump(value, f)
 else:
     for key, value in games.items():

@@ -4,6 +4,7 @@ from scipy.spatial.distance import cdist
 
 class CloudAsFunction(object):
     step = 5
+    window = 5
     theoric_max = 25000
     minimum_useful = 0
     maximum_useful = 250
@@ -20,11 +21,11 @@ class CloudAsFunction(object):
         count = 0
         vector = np.zeros((6,))
         for value_a in self._cloud:
-            if abs(value_a[-1] - index) <= self.step/2:
+            if abs(value_a[-1] - index) <= self.window/2:
                 count += 1
                 vector += value_a[:-1]
-            if value_a[-1] - index > self.step/2:
-                return index, vector / count
+            if value_a[-1] - index > self.window/2:
+                return index, vector / max(count, 1)
         return self.get_max(), self._cloud[-1][:-1]
 
     def get_max(self):

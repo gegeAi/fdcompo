@@ -1,28 +1,9 @@
 import pickle
 import glob
-import random
 import numpy as np
 import sortedcontainers as sc
 from cloud_as_function import CloudAsFunction
-import sys
-from threading import Thread
-import threading
-
-class AtomicCounter:
-
-    def __init__(self, initial=0):
-        self.value = initial
-        self._lock = threading.Lock()
-
-    def increment(self, num=1):
-        with self._lock:
-            self.value += num
-            return self.value
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+from multiprocessing import Process, Queue
 
 
 def add_game(used_set, player, game):
@@ -30,14 +11,6 @@ def add_game(used_set, player, game):
         used_set[player] = []
     used_set[player].append(game)
 
-
-games = {}
-
-print("<general>: loading games")
-
-for filename in glob.iglob('.\small functions bt\*.dat'):
-    with open(filename, 'rb') as f:
-        games[filename[18:-4]] = pickle.load(f)
 
 def compare_to(valid_function, knn_set, k):
     sorted_list = sc.SortedList()
@@ -51,14 +24,11 @@ def compare_to(valid_function, knn_set, k):
                 raise e
                 
     player_count = {}
-    try:
-        for (score, player) in sorted_list[:k]:
-            if player not in player_count.keys():
-                player_count[player] = [0, 77777]
-            player_count[player][0] += 1
-            player_count[player][1] = min(score, player_count[player][1])
-    except:
-        return "No", 99999
+    for (score, player) in sorted_list[:k]:
+        if player not in player_count.keys():
+            player_count[player] = [0, 77777]
+        player_count[player][0] += 1
+        player_count[player][1] = min(score, player_count[player][1])
         
     max_score = 666666
     max_count = 0
@@ -101,9 +71,9 @@ def split(game_set, folds=10, weights=np.asarray([87, 0, 0, 0, 1000, 1000,  1]))
                 
         yield functions_train_set, functions_validation_set
     return
-        
+
+
 def split_valid(game_set, folds=4):
-    i = 0
     for i in range(folds):
         functions_validation_set = dict.fromkeys(games.keys())
         
@@ -119,37 +89,32 @@ def split_valid(game_set, folds=4):
                 
         yield functions_validation_set
     return
-    
-    
+
+
+def run(functions_train_set, functions_validation_set, q):
+    correct = 0
+    incorrect = 0
+    for key, value in functions_validation_set.items():
+        if value is None:
+            continue
+        for one_game in value:
+            try:
+                prediction, score = compare_to(one_game, functions_train_set, 1)
+                if key == prediction:
+                    correct += 1
+                else:
+                    incorrect += 1
+            except IndexError:
+                continue
+    q.put((correct, incorrect))
+
+
 def simulate(games_dict, weights=np.asarray([87, 0, 0, 0, 1000, 1000,  1])):
-    correct = AtomicCounter(0)
-    incorrect = AtomicCounter(0)
-   
-    class Computer(Thread):
+    correct = 0
+    incorrect = 0
 
-        def __init__(self, functions_train_set, functions_validation_set, correct, incorrect):
-            Thread.__init__(self)
-            self.functions_train_set = functions_train_set
-            self.functions_validation_set = functions_validation_set
-            self.correct = correct
-            self.incorrect = incorrect
+    q_list = []
 
-        def run(self):
-            for key, value in self.functions_validation_set.items():
-                if value is None:
-                    continue
-                for one_game in value:
-                    if one_game is None:
-                        print("nononono")
-                    try:
-                        prediction, score = compare_to(one_game, self.functions_train_set, 1)
-                        if key == prediction:
-                            self.correct.increment()
-                        else:
-                            self.incorrect.increment()
-                    except IndexError:
-                        continue
-    
     print("<simulate>: begin splitting")
     sets = split(games_dict, 10, weights)
     
@@ -160,25 +125,43 @@ def simulate(games_dict, weights=np.asarray([87, 0, 0, 0, 1000, 1000,  1])):
         valid_sets = split_valid(functions_validation_set)
         
         for sub_valid_set in valid_sets:
-            computing.append(Computer(functions_train_set, sub_valid_set, correct, incorrect))
+            q_list.append(Queue())
+            computing.append(Process(target=run, args=(functions_train_set, sub_valid_set, q_list[-1])))
             computing[-1].start()
-        for t in computing:
+        for t, q in zip(computing, q_list):
+            c, inc = q.get()
+            correct += c
+            incorrect += inc
             t.join()
         break
-    return correct.value / (correct.value + incorrect.value)
+    return correct / (correct + incorrect)
 
-bef_value = -1
-conseq_desc = 0
-for i in range(1, 201, 20):
-    value = simulate(games, weights=np.asarray([1, 0, 0, 0, i, 100,  1]))
-    if value < bef_value:
-        conseq_desc += 1
-    else:
-        conseq_desc = 0
-    if conseq_desc >= 5:
-        break
-    bef_value = value
-    print("for hk10 = {}, success is : {}".format(i, value))
-print("for interval [0, 250], success is : {}".format(value))
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+
+    games = {}
+
+    print("<general>: loading games")
+
+    for filename in glob.iglob('.\small functions bt\*.dat'):
+        with open(filename, 'rb') as f:
+            games[filename[18:-4]] = pickle.load(f)
+
+    bef_value = -1
+    conseq_desc = 0
+    for i in range(5, 51, 5):
+        CloudAsFunction.window = i
+        value = simulate(games, weights=np.asarray([1, 121, 121, 121, 101, 101,  1]))
+        if value < bef_value:
+            conseq_desc += 1
+        else:
+            conseq_desc = 0
+        if conseq_desc >= 5:
+            break
+        bef_value = value
+        print("for window = {}, success is : {}".format(i, value))
+    print("for step = {}, success is : {}".format(i, value))
 
 
